@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Prices</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <style>
+        .line {
+            fill: none;
+            stroke-width: 1.5px;
+        }
+    </style>
+</head>
+<body>
+    <svg width="960" height="500"></svg>
+    <script>
+        // Function to parse and draw chart
+        function parseAndDraw(data, label, color) {
+            const parseTime = d3.timeParse("%m/%d/%Y %H:%M");
+
+            data.forEach(d => {
+                d['Date/Time'] = parseTime(d['Date/Time']);
+                d['Close'] = +d['Close'];
+            });
+
+            x.domain(d3.extent(data, d => d['Date/Time']));
+            y.domain([0, d3.max(data, d => d['Close'])]);
+
+            svg.append("path")
+                .datum(data)
+                .attr("class", "line")
+                .attr("d", d3.line()
+                    .x(d => x(d['Date/Time']))
+                    .y(d => y(d['Close']))
+                )
+                .attr("stroke", color)
+                .attr("stroke-width", 1.5)
+                .attr("fill", "none");
+
+            svg.append("text")
+                .attr("transform", `translate(${width},${y(data[data.length - 1]['Close'])})`)
+                .attr("dy", ".35em")
+                .attr("text-anchor", "start")
+                .style("fill", color)
+                .text(label);
+        }
+
+        const margin = {top: 20, right: 20, bottom: 30, left: 50},
+              width = 960 - margin.left - margin.right,
+              height = 500 - margin.top - margin.bottom;
+
+        const x = d3.scaleTime().range([0, width]);
+        const y = d3.scaleLinear().range([height, 0]);
+
+        const svg = d3.select("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+          .append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        svg.append("g")
+            .attr("transform", `translate(0,${height})`)
+            .call(d3.axisBottom(x));
+
+        svg.append("g")
+            .call(d3.axisLeft(y));
+
+        const files = [
+            {url: 'FPT.csv', label: 'FPT', color: 'blue'},
+            {url: 'PNJ.csv', label: 'PNJ', color: 'red'},
+            {url: 'MSN.csv', label: 'MSN', color: 'green'},
+            {url: 'VIC.csv', label: 'VIC', color: 'purple'}
+        ];
+
+        files.forEach(file => {
+            Papa.parse(file.url, {
+                download: true,
+                header: true,
+                complete: function(results) {
+                    parseAndDraw(results.data, file.label, file.color);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
